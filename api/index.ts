@@ -102,6 +102,8 @@ app.post("/api/incoming-email", async (req: Request, res: Response) => {
       userContent.push({ type: "text", text: strippedText });
     }
 
+    console.log(attachments);
+
     // Process attachments
     for (const attachment of attachments) {
       if (attachment["content-type"].startsWith("image/")) {
