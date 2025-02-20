@@ -86,7 +86,7 @@ app.post("/incoming-email", async (c) => {
       from: process.env.FROM_EMAIL,
       to: sender,
       subject: `Re: ${subject}`,
-      text: aiResponse,
+      text: `${aiResponse}\n\n------ Original Message ------\nFrom: ${sender}\nSubject: ${subject}\n\n${strippedText}`,
     });
 
     return c.json({ status: "success", message: "Response sent successfully" });
