@@ -15,16 +15,16 @@ importers:
         specifier: ^4.21.2
         version: 4.21.2
       form-data:
-        specifier: ^4.0.0
+        specifier: '*'
         version: 4.0.2
       hono:
         specifier: ^4.7.2
         version: 4.7.2
       mailgun.js:
-        specifier: ^9.4.1
+        specifier: '*'
         version: 9.4.1
       openai:
-        specifier: ^4.28.0
+        specifier: '*'
         version: 4.85.2
     devDependencies:
       vercel:
