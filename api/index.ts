@@ -1,6 +1,6 @@
 import express from "express";
 import type { Request, Response } from "express";
-import MailgunImport from "mailgun.js";
+import MailgunImport, { WebhookResponse } from "mailgun.js";
 import FormData from "form-data";
 import OpenAI from "openai";
 
@@ -76,7 +76,10 @@ app.post("/api/incoming-email", async (req: Request, res: Response) => {
     const subject = body.subject;
     const strippedText = body["stripped-text"]; // Plain text without quotes
     const messageId = body["Message-Id"];
-    const attachments = body.attachments || [];
+    const attachments =
+      body.attachments && typeof body.attachments === "string"
+        ? JSON.parse(body.attachments)
+        : [];
 
     if (!strippedText && attachments.length === 0) {
       throw new Error("No email content or attachments found");
@@ -106,6 +109,7 @@ app.post("/api/incoming-email", async (req: Request, res: Response) => {
 
     // Process attachments
     for (const attachment of attachments) {
+      console.log(attachment);
       if (attachment["content-type"].startsWith("image/")) {
         const imageBuffer = await downloadAttachment(attachment.url);
         const base64Image = imageBuffer.toString("base64");
