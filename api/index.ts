@@ -45,6 +45,7 @@ interface MailgunWebhookBody {
   sender: string;
   subject: string;
   "stripped-text": string;
+  "Message-Id": string;
   [key: string]: unknown;
 }
 
@@ -57,6 +58,7 @@ app.post("/api/incoming-email", async (req: Request, res: Response) => {
     const sender = body.sender;
     const subject = body.subject;
     const strippedText = body["stripped-text"]; // Plain text without quotes
+    const messageId = body["Message-Id"];
 
     if (!strippedText) {
       throw new Error("No email content found");
@@ -88,7 +90,9 @@ app.post("/api/incoming-email", async (req: Request, res: Response) => {
       from: process.env.FROM_EMAIL,
       to: sender,
       subject: `Re: ${subject}`,
-      text: `${aiResponse}\n\n------ Original Message ------\nFrom: ${sender}\nSubject: ${subject}\n\n${strippedText}`,
+      text: `${aiResponse}`,
+      "h:In-Reply-To": messageId,
+      "h:References": messageId,
     });
 
     res.json({ status: "success", message: "Response sent successfully" });
