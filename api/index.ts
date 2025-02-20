@@ -1,8 +1,10 @@
-import { Hono } from "hono";
-import { handle } from "hono/vercel";
-import Mailgun from "mailgun.js";
+import express from "express";
+import type { Request, Response } from "express";
+import MailgunImport from "mailgun.js";
 import FormData from "form-data";
 import OpenAI from "openai";
+
+const Mailgun = MailgunImport.default;
 
 // Declare process.env types
 declare global {
@@ -16,10 +18,6 @@ declare global {
   }
 }
 
-export const config = {
-  runtime: "edge",
-};
-
 // Initialize clients
 const mailgun = new Mailgun(FormData);
 const mg = mailgun.client({
@@ -32,11 +30,15 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const app = new Hono().basePath("/api");
+const app = express();
+
+// Middleware to parse JSON bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Basic health check endpoint
-app.get("/", (c) => {
-  return c.json({ status: "healthy" });
+app.get("/api", (req: Request, res: Response) => {
+  res.json({ status: "healthy" });
 });
 
 interface MailgunWebhookBody {
@@ -47,9 +49,9 @@ interface MailgunWebhookBody {
 }
 
 // Mailgun webhook endpoint
-app.post("/incoming-email", async (c) => {
+app.post("/api/incoming-email", async (req: Request, res: Response) => {
   try {
-    const body = (await c.req.parseBody()) as MailgunWebhookBody;
+    const body = req.body as MailgunWebhookBody;
 
     // Extract email content from the webhook payload
     const sender = body.sender;
@@ -89,13 +91,14 @@ app.post("/incoming-email", async (c) => {
       text: `${aiResponse}\n\n------ Original Message ------\nFrom: ${sender}\nSubject: ${subject}\n\n${strippedText}`,
     });
 
-    return c.json({ status: "success", message: "Response sent successfully" });
+    res.json({ status: "success", message: "Response sent successfully" });
   } catch (error: unknown) {
     console.error("Error processing email:", error);
     const errorMessage =
       error instanceof Error ? error.message : "An unknown error occurred";
-    return c.json({ status: "error", message: errorMessage }, 500);
+    res.status(500).json({ status: "error", message: errorMessage });
   }
 });
 
-export default handle(app);
+// Export the Express app as the default export
+export default app;

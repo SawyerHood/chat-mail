@@ -1,14 +1,23 @@
 {
   "name": "chat-mail",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
   "scripts": {
-    "start": "vercel dev",
-    "deploy": "vercel"
+    "dev": "vercel dev",
+    "build": "tsc",
+    "start": "node dist/api/index.js"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "hono": "^4.7.2",
-    "mailgun.js": "^9.4.1",
-    "form-data": "^4.0.0",
-    "openai": "^4.28.0"
+    "@types/express": "^5.0.0",
+    "express": "^4.21.2",
+    "form-data": "*",
+    "mailgun.js": "*",
+    "openai": "*",
+    "hono": "^4.7.2"
   },
   "devDependencies": {
     "vercel": "^32.4.1"
