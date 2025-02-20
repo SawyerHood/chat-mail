@@ -56,13 +56,14 @@ interface MailgunWebhookBody {
 }
 
 async function downloadAttachment(url: string): Promise<Buffer> {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Basic ${Buffer.from(
-        `api:${process.env.MAILGUN_API_KEY}`
-      ).toString("base64")}`,
-    },
-  });
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download attachment: ${response.status} ${response.statusText}`
+    );
+  }
+
   return Buffer.from(await response.arrayBuffer());
 }
 
