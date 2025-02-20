@@ -46,7 +46,24 @@ interface MailgunWebhookBody {
   subject: string;
   "stripped-text": string;
   "Message-Id": string;
+  attachments: Array<{
+    url: string;
+    "content-type": string;
+    name: string;
+    size: number;
+  }>;
   [key: string]: unknown;
+}
+
+async function downloadAttachment(url: string): Promise<Buffer> {
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Basic ${Buffer.from(
+        `api:${process.env.MAILGUN_API_KEY}`
+      ).toString("base64")}`,
+    },
+  });
+  return Buffer.from(await response.arrayBuffer());
 }
 
 // Mailgun webhook endpoint
@@ -59,25 +76,58 @@ app.post("/api/incoming-email", async (req: Request, res: Response) => {
     const subject = body.subject;
     const strippedText = body["stripped-text"]; // Plain text without quotes
     const messageId = body["Message-Id"];
+    const attachments = body.attachments || [];
 
-    if (!strippedText) {
-      throw new Error("No email content found");
+    if (!strippedText && attachments.length === 0) {
+      throw new Error("No email content or attachments found");
     }
+
+    let messages: Array<OpenAI.Chat.ChatCompletionMessageParam> = [
+      {
+        role: "system",
+        content:
+          "You are a helpful email assistant. Provide clear and concise responses. If images are included, describe them and incorporate their context into your response.",
+      },
+    ];
+
+    // Create content array for user message
+    type ContentPart =
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string } };
+
+    let userContent: ContentPart[] = [];
+
+    // Add text content if present
+    if (strippedText) {
+      userContent.push({ type: "text", text: strippedText });
+    }
+
+    // Process attachments
+    for (const attachment of attachments) {
+      if (attachment["content-type"].startsWith("image/")) {
+        const imageBuffer = await downloadAttachment(attachment.url);
+        const base64Image = imageBuffer.toString("base64");
+
+        userContent.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${attachment["content-type"]};base64,${base64Image}`,
+          },
+        });
+      }
+    }
+
+    // Add combined user message with type assertion
+    messages.push({
+      role: "user",
+      content: userContent, // temporary type assertion to bypass strict typing
+    });
 
     // Generate response using ChatGPT
     const completion = await openai.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful email assistant. Provide clear and concise responses.",
-        },
-        {
-          role: "user",
-          content: strippedText,
-        },
-      ],
+      messages,
       model: "gpt-4o-mini",
+      max_tokens: 1000,
     });
 
     const aiResponse = completion.choices[0]?.message?.content;
